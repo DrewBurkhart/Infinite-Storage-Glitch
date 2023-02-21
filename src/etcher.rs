@@ -69,12 +69,18 @@ fn translate_u8(binary_data: Vec<bool>) -> anyhow::Result<Vec<u8>> {
         }
     }
 
+    if !buffer.is_empty() {
+        return Err(anyhow::anyhow!(
+            "Invalid input: binary data has incomplete byte"
+        ));
+    }
+
     Ok(byte_data)
 }
 
 fn translate_u32(binary_data: Vec<bool>) -> anyhow::Result<Vec<u32>> {
-    let mut buffer: Vec<bool> = Vec::new();
-    let mut byte_data: Vec<u32> = Vec::new();
+    let mut buffer: Vec<bool> = Vec::with_capacity(32);
+    let mut byte_data: Vec<u32> = Vec::with_capacity(binary_data.len() / 32);
 
     for bit in binary_data {
         buffer.push(bit);
@@ -83,11 +89,17 @@ fn translate_u32(binary_data: Vec<bool>) -> anyhow::Result<Vec<u32>> {
             //idk how this works but it does
             let u32_byte = buffer.iter().fold(0u32, |v, b| (v << 1) + (*b as u32));
             byte_data.push(u32_byte);
-            buffer.clear();
+            buffer = buffer[32..].to_vec();
         }
     }
 
-    return Ok(byte_data);
+    if !buffer.is_empty() {
+        return Err(anyhow::anyhow!(
+            "Invalid input: binary data has incomplete u32 value"
+        ));
+    }
+
+    Ok(byte_data)
 }
 
 pub fn write_bytes(path: &str, data: Vec<u8>) -> anyhow::Result<()> {
