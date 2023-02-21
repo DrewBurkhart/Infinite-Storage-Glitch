@@ -41,27 +41,17 @@ pub fn rip_binary(byte_data: Vec<u8>) -> anyhow::Result<Vec<bool>> {
 }
 
 pub fn rip_binary_u32(bytes: Vec<u32>) -> anyhow::Result<Vec<bool>> {
-    let mut binary_data: Vec<bool> = Vec::new();
+    let mut binary_data = Vec::with_capacity(bytes.len() * 32);
 
     for byte in bytes {
-        let mut bits = format!("{:b}", byte);
-        let missing_0 = 32 - bits.len();
-
-        //Adding the missing 0's, could be faster
-        for _ in 0..missing_0 {
-            bits.insert(0, '0');
-        }
-
-        for bit in bits.chars() {
-            if bit == '1' {
-                binary_data.push(true);
-            } else {
-                binary_data.push(false);
-            }
+        for i in (0..32).rev() {
+            binary_data.push((byte >> i) & 1 != 0);
         }
     }
 
-    return Ok(binary_data);
+    println!("Binary ripped successfully");
+    // println!("Binary length: {}", binary_data.len());
+    Ok(binary_data)
 }
 
 fn translate_u8(binary_data: Vec<bool>) -> anyhow::Result<Vec<u8>> {
