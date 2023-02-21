@@ -55,8 +55,8 @@ pub fn rip_binary_u32(bytes: Vec<u32>) -> anyhow::Result<Vec<bool>> {
 }
 
 fn translate_u8(binary_data: Vec<bool>) -> anyhow::Result<Vec<u8>> {
-    let mut buffer: Vec<bool> = Vec::new();
-    let mut byte_data: Vec<u8> = Vec::new();
+    let mut buffer: Vec<bool> = Vec::with_capacity(8);
+    let mut byte_data: Vec<u8> = Vec::with_capacity(binary_data.len() / 8);
 
     for bit in binary_data {
         buffer.push(bit);
@@ -64,13 +64,12 @@ fn translate_u8(binary_data: Vec<bool>) -> anyhow::Result<Vec<u8>> {
         if buffer.len() == 8 {
             //idk how this works but it does
             let byte = buffer.iter().fold(0u8, |v, b| (v << 1) + (*b as u8));
-
             byte_data.push(byte);
-            buffer.clear();
+            buffer = buffer[8..].to_vec();
         }
     }
 
-    return Ok(byte_data);
+    Ok(byte_data)
 }
 
 fn translate_u32(binary_data: Vec<bool>) -> anyhow::Result<Vec<u32>> {
