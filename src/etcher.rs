@@ -110,36 +110,33 @@ pub fn write_bytes(path: &str, data: Vec<u8>) -> anyhow::Result<()> {
 
 //Returns average value of the pixel given size and location
 fn get_pixel(frame: &EmbedSource, x: i32, y: i32) -> Option<Vec<u8>> {
-    let mut r_list: Vec<u8> = Vec::new();
-    let mut g_list: Vec<u8> = Vec::new();
-    let mut b_list: Vec<u8> = Vec::new();
+    let mut r_sum = 0u32;
+    let mut g_sum = 0u32;
+    let mut b_sum = 0u32;
 
-    for i in 0..frame.size {
-        for j in 0..frame.size {
-            let bgr = frame
-                .image
-                .at_2d::<opencv::core::Vec3b>(y + i, x + j)
-                .unwrap();
-            //could reduce size of integers ?
-            r_list.push(bgr[2]);
-            g_list.push(bgr[1]);
-            b_list.push(bgr[0]);
+    let size = frame.size as i32;
+    for i in 0..size {
+        for j in 0..size {
+            if let Some(bgr) = frame.image.get_2d(y + i, x + j) {
+                r_sum += bgr[2] as u32;
+                g_sum += bgr[1] as u32;
+                b_sum += bgr[0] as u32;
+            }
         }
     }
 
-    //A hacked on solution, do better
-    let r_sum: usize = r_list.iter().map(|&x| x as usize).sum();
-    let r_average = r_sum / r_list.len();
-    let g_sum: usize = g_list.iter().map(|&x| x as usize).sum();
-    let g_average = g_sum / g_list.len();
-    let b_sum: usize = b_list.iter().map(|&x| x as usize).sum();
-    let b_average = b_sum / b_list.len();
+    let pixel_count = size * size;
+    if pixel_count > 0 {
+        let r_average = (r_sum / pixel_count) as u8;
+        let g_average = (g_sum / pixel_count) as u8;
+        let b_average = (b_sum / pixel_count) as u8;
+        let rgb_average = vec![r_average, g_average, b_average];
+        // dbg!(&rgb_average);
 
-    //Potentially unnecessary conversion
-    let rgb_average = vec![r_average as u8, g_average as u8, b_average as u8];
-    // dbg!(&rgb_average);
-
-    return Some(rgb_average);
+        Some(rgb_average)
+    } else {
+        None
+    }
 }
 
 //Draws the pixels, exists so you can draw bigger blocks
