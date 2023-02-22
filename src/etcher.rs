@@ -413,9 +413,6 @@ pub fn etch(path: &str, data: Data, settings: Settings) -> anyhow::Result<()> {
             //UGLY DUPING
             let chunks = data.bytes.chunks(chunk_data_size);
             for chunk in chunks {
-                //source of perf loss ?
-                let chunk_copy = chunk.to_vec();
-
                 let thread = thread::spawn(move || {
                     let mut frames = Vec::new();
                     let mut index: usize = 0;
@@ -423,7 +420,7 @@ pub fn etch(path: &str, data: Data, settings: Settings) -> anyhow::Result<()> {
                     loop {
                         let mut source =
                             EmbedSource::new(settings.size, settings.width, settings.height);
-                        match etch_color(&mut source, &chunk_copy, &mut index) {
+                        match etch_color(&mut source, &chunk[index..], &mut index) {
                             Ok(_) => frames.push(source),
                             Err(v) => {
                                 frames.push(source);
@@ -439,6 +436,7 @@ pub fn etch(path: &str, data: Data, settings: Settings) -> anyhow::Result<()> {
                 spool.push(thread);
             }
         }
+
         OutputMode::Binary => {
             let length = data.binary.len();
 
@@ -453,9 +451,6 @@ pub fn etch(path: &str, data: Data, settings: Settings) -> anyhow::Result<()> {
             //UGLY DUPING
             let chunks = data.binary.chunks(chunk_data_size);
             for chunk in chunks {
-                //source of perf loss ?
-                let chunk_copy = chunk.to_vec();
-
                 let thread = thread::spawn(move || {
                     let mut frames = Vec::new();
                     let mut index: usize = 0;
@@ -463,7 +458,7 @@ pub fn etch(path: &str, data: Data, settings: Settings) -> anyhow::Result<()> {
                     loop {
                         let mut source =
                             EmbedSource::new(settings.size, settings.width, settings.height);
-                        match etch_bw(&mut source, &chunk_copy, &mut index) {
+                        match etch_bw(&mut source, &chunk[index..], &mut index) {
                             Ok(_) => frames.push(source),
                             Err(v) => {
                                 frames.push(source);
@@ -508,7 +503,7 @@ pub fn etch(path: &str, data: Data, settings: Settings) -> anyhow::Result<()> {
     }
     video.release()?;
 
-    println!("Video embedded succesfully at {}", path);
+    println!("Video embedded successfully at {}", path);
 
     return Ok(());
 }
