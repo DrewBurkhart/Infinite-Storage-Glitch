@@ -144,15 +144,15 @@ fn etch_pixel(frame: &mut EmbedSource, rgb: Vec<u8>, x: i32, y: i32) -> anyhow::
     for i in 0..frame.size {
         for j in 0..frame.size {
             // dbg!(x, y);
-            let bgr = frame.image.at_2d_mut::<opencv::core::Vec3b>(y + i, x + j)?;
             //Opencv devs are reptilians who believe in bgr
+            let bgr = frame.image.get_2d_mut(y + i, x + j)?;
             bgr[2] = rgb[0];
             bgr[1] = rgb[1];
             bgr[0] = rgb[2];
         }
     }
 
-    return Ok(());
+    Ok(())
 }
 
 fn etch_bw(
