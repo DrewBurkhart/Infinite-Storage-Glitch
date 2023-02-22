@@ -228,28 +228,26 @@ fn read_bw(
     let mut binary_data: Vec<bool> = Vec::new();
     for y in (0..height).step_by(size) {
         for x in (0..width).step_by(size) {
-            let rgb = get_pixel(&source, x, y);
-            if rgb == None {
-                continue;
-            } else {
-                let rgb = rgb.unwrap();
-                if rgb[0] >= 127 {
-                    binary_data.push(true);
-                } else {
-                    binary_data.push(false);
-                }
+            if let Some(rgb) = get_pixel(&source, x, y) {
+                let bit = rgb[0] >= 127;
+                binary_data.push(bit);
             }
         }
     }
 
     //Cut off nasty bits at the end
     if current_frame == final_frame {
-        let slice = binary_data[0..final_bit as usize].to_vec();
-        return Ok(slice);
+        if let Some(slice) = binary_data.get(..final_bit as usize) {
+            return Ok(slice.to_vec());
+        }
+    }
+
+    if let Some(slice) = binary_data.get(..) {
+        return Ok(slice.to_vec());
     }
 
     // dbg!(binary_data.len());
-    return Ok(binary_data);
+    Ok(Vec::new())
 }
 
 fn read_color(
