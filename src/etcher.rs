@@ -375,9 +375,7 @@ fn read_instructions(
     let u32_data = translate_u32(binary_data)?;
     // dbg!(&u32_data);
 
-    let out_mode = u32_data[0];
-
-    let out_mode = match out_mode {
+    let out_mode = match u32_data[0] {
         u32::MAX => OutputMode::Color,
         _ => OutputMode::Binary,
     };
