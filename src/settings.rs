@@ -12,13 +12,13 @@ pub struct Data {
 
 //Get rid of possible empty spaces
 impl Data {
-    pub fn new_out_mode(out_mode: OutputMode) -> Data {
-        Data {
-            bytes: Vec::new(),
-            binary: Vec::new(),
-            out_mode
-        }
-    }
+    // pub fn new_out_mode(out_mode: OutputMode) -> Data {
+    //     Data {
+    //         bytes: Vec::new(),
+    //         binary: Vec::new(),
+    //         out_mode
+    //     }
+    // }
 
     pub fn from_binary(binary: Vec<bool>) -> Data {
         Data {
@@ -34,7 +34,7 @@ impl Data {
             binary: Vec::new(),
             out_mode: OutputMode::Color,
         }
-    } 
+    }
 }
 
 #[derive(Debug)]
@@ -47,14 +47,13 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn new(size: i32, threads: usize, fps: i32, width: i32, height: i32) 
-            -> Settings {
+    pub fn new(size: i32, threads: usize, fps: i32, width: i32, height: i32) -> Settings {
         Settings {
             size,
             threads,
             fps: fps as f64,
-            height, 
-            width
+            height,
+            width,
         }
     }
 }

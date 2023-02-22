@@ -1,18 +1,11 @@
-use anyhow;
-use inquire::{
-    CustomType, min_length, Confirm, MultiSelect, Password, Select, Text,
-};
+use inquire::{CustomType, Select, Text};
 use youtube_dl::{download_yt_dlp, YoutubeDl};
 
-use crate::settings::{Settings, OutputMode, Data};
 use crate::etcher;
+use crate::settings::{Data, OutputMode, Settings};
 
 pub async fn summon_gooey() -> anyhow::Result<()> {
-    let options = vec![
-        "Embed",
-        "Download",
-        "Dislodge"
-    ];
+    let options = vec!["Embed", "Download", "Dislodge"];
 
     let modes = Select::new("Pick what you want to do with the program", options)
         .with_help_message("Embed: Create a video from files,\n Download: Download files stored on YouTube,\n Dislodge: Return files from an embedded video")
@@ -20,45 +13,42 @@ pub async fn summon_gooey() -> anyhow::Result<()> {
         .unwrap();
 
     match modes {
-        "Embed" => return embed_path(),
+        "Embed" => embed_path(),
         "Download" => return download_path().await,
-        "Dislodge" => return dislodge_path(),
-        _ => {panic!("Something weird happened when selecting modes");}
+        "Dislodge" => dislodge_path(),
+        _ => {
+            panic!("Something weird happened when selecting modes");
+        }
     }
 }
 
-
-fn embed_path()  -> anyhow::Result<()> {
-
+fn embed_path() -> anyhow::Result<()> {
     //Should use enums
     let presets = vec![
         "Optimal compression resistance",
         "Paranoid compression resistance",
         "Maximum efficiency",
-        "Custom"
+        "Custom",
     ];
 
-    let out_modes = vec![
-        "Colored",
-        "B/W (Binary)",
-    ];
+    let out_modes = vec!["Colored", "B/W (Binary)"];
 
-    let resolutions = vec![
-        "144p",
-        "240p",
-        "360p",
-        "480p",
-        "720p",
-    ];
+    let resolutions = vec!["144p", "240p", "360p", "480p", "720p"];
 
     let path = Text::new("What is the path to your file ?")
-    .with_default("src/tests/test.txt")
-    .prompt().unwrap();
-
-    let preset = Select::new("You can use one of the existing presets or custom settings", presets.clone())
-        .with_help_message("Any amount of compression on Maximum Efficiency will corrupt all your hopes and dreams")
+        .with_default("src/tests/test.txt")
         .prompt()
         .unwrap();
+
+    let preset = Select::new(
+        "You can use one of the existing presets or custom settings",
+        presets.clone(),
+    )
+    .with_help_message(
+        "Any amount of compression on Maximum Efficiency will corrupt all your hopes and dreams",
+    )
+    .prompt()
+    .unwrap();
 
     match preset {
         "Maximum efficiency" => {
@@ -71,7 +61,7 @@ fn embed_path()  -> anyhow::Result<()> {
             etcher::etch("output.avi", data, settings)?;
 
             return Ok(());
-        },
+        }
         "Optimal compression resistance" => {
             let bytes = etcher::rip_bytes(&path)?;
             let binary = etcher::rip_binary(bytes)?;
@@ -82,7 +72,7 @@ fn embed_path()  -> anyhow::Result<()> {
             etcher::etch("output.avi", data, settings)?;
 
             return Ok(());
-        },
+        }
         "Paranoid compression resistance" => {
             let bytes = etcher::rip_bytes(&path)?;
             let binary = etcher::rip_binary(bytes)?;
@@ -93,7 +83,7 @@ fn embed_path()  -> anyhow::Result<()> {
             etcher::etch("output.avi", data, settings)?;
 
             return Ok(());
-        },
+        }
         _ => (),
     }
 
@@ -120,7 +110,9 @@ fn embed_path()  -> anyhow::Result<()> {
     let out_mode = match out_mode {
         "Colored" => OutputMode::Color,
         "B/W (Binary)" => OutputMode::Binary,
-        _ => {panic!("AAAAAAAAAAAAAAAA")},
+        _ => {
+            panic!("AAAAAAAAAAAAAAAA")
+        }
     };
 
     let fps = CustomType::<i32>::new("What fps should the video be at ?")
@@ -153,7 +145,7 @@ fn embed_path()  -> anyhow::Result<()> {
             let settings = Settings::new(size, threads, fps, width, height);
 
             etcher::etch("output.avi", data, settings)?;
-        },
+        }
         OutputMode::Binary => {
             let bytes = etcher::rip_bytes(&path)?;
             let binary = etcher::rip_binary(bytes)?;
@@ -162,16 +154,17 @@ fn embed_path()  -> anyhow::Result<()> {
             let settings = Settings::new(size, threads, fps, width, height);
 
             etcher::etch("output.avi", data, settings)?;
-        },
+        }
     }
 
-    return Ok(());
+    Ok(())
 }
 
-async fn download_path()  -> anyhow::Result<()> {
+async fn download_path() -> anyhow::Result<()> {
     //
     let url = Text::new("What is the url to the video ?")
-        .prompt().unwrap();
+        .prompt()
+        .unwrap();
 
     let yt_dlp_path = download_yt_dlp(".").await?;
 
@@ -183,23 +176,26 @@ async fn download_path()  -> anyhow::Result<()> {
         .run_async()
         .await?;
 
-    let video = output.into_single_video().unwrap();
-    let title = video.title;
+    output.into_single_video().unwrap();
+    // let video = output.into_single_video().unwrap();
+    // let title = video.title;
 
     println!("Video downloaded succesfully");
 
-    return Ok(());
+    Ok(())
 }
 
 //TEMPORARY DEFAULTS
-fn dislodge_path()  -> anyhow::Result<()> {
+fn dislodge_path() -> anyhow::Result<()> {
     let in_path = Text::new("What is the path to your video ?")
         .with_default("output.avi")
-        .prompt().unwrap();
+        .prompt()
+        .unwrap();
 
     let out_path = Text::new("Where should the output go ?")
         .with_help_message("Please include name of file and extension")
-        .prompt().unwrap();
+        .prompt()
+        .unwrap();
 
     // let threads = CustomType::<usize>::new("How many threads to dedicate for processing ?")
     //     .with_error_message("Please type a valid number")
@@ -210,5 +206,5 @@ fn dislodge_path()  -> anyhow::Result<()> {
     let out_data = etcher::read(&in_path, 1)?;
     etcher::write_bytes(&out_path, out_data)?;
 
-    return Ok(());
+    Ok(())
 }
