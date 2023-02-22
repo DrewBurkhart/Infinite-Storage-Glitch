@@ -1,17 +1,11 @@
-use std::thread::JoinHandle;
 use std::{fs, thread, vec};
 
-use anyhow;
-use anyhow::Error; //anyhow::Error::msg("My err");
-
-use opencv::core::{Mat, Size, VecN, Vector, CV_8UC3};
-use opencv::highgui::{self, WINDOW_FULLSCREEN};
-use opencv::imgcodecs::{imread, imwrite, IMREAD_COLOR};
+use opencv::core::Mat;
 use opencv::prelude::*;
 use opencv::videoio::{VideoCapture, VideoWriter, CAP_ANY};
 
 use crate::embedsource::EmbedSource;
-use crate::settings::{self, Data, OutputMode, Settings};
+use crate::settings::{Data, OutputMode, Settings};
 use crate::timer::Timer;
 
 //Get and write bytes from and to files. Start and end of app
@@ -21,7 +15,7 @@ pub fn rip_bytes(path: &str) -> anyhow::Result<Vec<u8>> {
 
     println!("Bytes ripped succesfully");
     println!("Byte length: {}", byte_data.len());
-    return Ok(byte_data);
+    Ok(byte_data)
 }
 
 pub fn rip_binary(byte_data: Vec<u8>) -> anyhow::Result<Vec<bool>> {
@@ -32,7 +26,7 @@ pub fn rip_binary(byte_data: Vec<u8>) -> anyhow::Result<Vec<bool>> {
         for i in (0..8).rev() {
             bits[i] = (byte >> i) & 1 != 0;
         }
-        binary_data.extend(&bits);
+        binary_data.extend(bits);
     }
 
     println!("Binary ripped successfully");
@@ -105,7 +99,7 @@ fn translate_u32(binary_data: Vec<bool>) -> anyhow::Result<Vec<u32>> {
 pub fn write_bytes(path: &str, data: Vec<u8>) -> anyhow::Result<()> {
     fs::write(path, data)?;
     println!("File written succesfully");
-    return Ok(());
+    Ok(())
 }
 
 //Returns average value of the pixel given size and location
@@ -114,22 +108,24 @@ fn get_pixel(frame: &EmbedSource, x: i32, y: i32) -> Option<Vec<u8>> {
     let mut g_sum = 0u32;
     let mut b_sum = 0u32;
 
-    let size = frame.size as i32;
+    let size = frame.size;
     for i in 0..size {
         for j in 0..size {
-            if let Some(bgr) = frame.image.get_2d(y + i, x + j) {
-                r_sum += bgr[2] as u32;
-                g_sum += bgr[1] as u32;
-                b_sum += bgr[0] as u32;
-            }
+            let bgr = frame
+                .image
+                .at_2d::<opencv::core::Vec3b>(y + i, x + j)
+                .unwrap();
+            r_sum += bgr[2] as u32;
+            g_sum += bgr[1] as u32;
+            b_sum += bgr[0] as u32;
         }
     }
 
     let pixel_count = size * size;
     if pixel_count > 0 {
-        let r_average = (r_sum / pixel_count) as u8;
-        let g_average = (g_sum / pixel_count) as u8;
-        let b_average = (b_sum / pixel_count) as u8;
+        let r_average = (r_sum / pixel_count as u32) as u8;
+        let g_average = (g_sum / pixel_count as u32) as u8;
+        let b_average = (b_sum / pixel_count as u32) as u8;
         let rgb_average = vec![r_average, g_average, b_average];
         // dbg!(&rgb_average);
 
@@ -144,8 +140,8 @@ fn etch_pixel(frame: &mut EmbedSource, rgb: Vec<u8>, x: i32, y: i32) -> anyhow::
     for i in 0..frame.size {
         for j in 0..frame.size {
             // dbg!(x, y);
+            let bgr = frame.image.at_2d_mut::<opencv::core::Vec3b>(y + i, x + j)?;
             //Opencv devs are reptilians who believe in bgr
-            let bgr = frame.image.get_2d_mut(y + i, x + j)?;
             bgr[2] = rgb[0];
             bgr[1] = rgb[1];
             bgr[0] = rgb[2];
@@ -157,7 +153,7 @@ fn etch_pixel(frame: &mut EmbedSource, rgb: Vec<u8>, x: i32, y: i32) -> anyhow::
 
 fn etch_bw(
     source: &mut EmbedSource,
-    data: &Vec<bool>,
+    data: &[bool],
     global_index: &mut usize,
 ) -> anyhow::Result<()> {
     let _timer = Timer::new("Etching frame");
@@ -187,7 +183,7 @@ fn etch_bw(
 
 fn etch_color(
     source: &mut EmbedSource,
-    data: &Vec<u8>,
+    data: &[u8],
     global_index: &mut usize,
 ) -> anyhow::Result<()> {
     let _timer = Timer::new("Etching frame");
@@ -228,7 +224,7 @@ fn read_bw(
     let mut binary_data: Vec<bool> = Vec::new();
     for y in (0..height).step_by(size) {
         for x in (0..width).step_by(size) {
-            if let Some(rgb) = get_pixel(&source, x, y) {
+            if let Some(rgb) = get_pixel(source, x, y) {
                 let bit = rgb[0] >= 127;
                 binary_data.push(bit);
             }
@@ -265,7 +261,7 @@ fn read_color(
     let mut byte_data: Vec<u8> = Vec::new();
     for y in (0..height).step_by(size) {
         for x in (0..width).step_by(size) {
-            if let Some(rgb) = get_pixel(&source, x, y) {
+            if let Some(rgb) = get_pixel(source, x, y) {
                 byte_data.extend_from_slice(&rgb);
             }
         }
@@ -363,7 +359,7 @@ fn etch_instructions(settings: &Settings, data: &Data) -> anyhow::Result<EmbedSo
 
     // imwrite("src/out/test1.png", &source.image, &Vector::new())?;
 
-    return Ok(source);
+    Ok(source)
 }
 
 fn read_instructions(
@@ -389,7 +385,7 @@ fn read_instructions(
 
     let settings = Settings::new(size, threads, 1337, width, height);
 
-    return Ok((out_mode, final_frame, final_byte, settings));
+    Ok((out_mode, final_frame, final_byte, settings))
 }
 
 pub fn etch(path: &str, data: Data, settings: Settings) -> anyhow::Result<()> {
@@ -411,6 +407,7 @@ pub fn etch(path: &str, data: Data, settings: Settings) -> anyhow::Result<()> {
             //UGLY DUPING
             let chunks = data.bytes.chunks(chunk_data_size);
             for chunk in chunks {
+                let chunk = chunk.to_vec();
                 let thread = thread::spawn(move || {
                     let mut frames = Vec::new();
                     let mut index: usize = 0;
@@ -420,7 +417,7 @@ pub fn etch(path: &str, data: Data, settings: Settings) -> anyhow::Result<()> {
                             EmbedSource::new(settings.size, settings.width, settings.height);
                         match etch_color(&mut source, &chunk[index..], &mut index) {
                             Ok(_) => frames.push(source),
-                            Err(v) => {
+                            Err(_) => {
                                 frames.push(source);
                                 println!("Embedding thread complete!");
                                 break;
@@ -428,7 +425,7 @@ pub fn etch(path: &str, data: Data, settings: Settings) -> anyhow::Result<()> {
                         }
                     }
 
-                    return frames;
+                    frames
                 });
 
                 spool.push(thread);
@@ -449,6 +446,7 @@ pub fn etch(path: &str, data: Data, settings: Settings) -> anyhow::Result<()> {
             //UGLY DUPING
             let chunks = data.binary.chunks(chunk_data_size);
             for chunk in chunks {
+                let chunk = chunk.to_vec();
                 let thread = thread::spawn(move || {
                     let mut frames = Vec::new();
                     let mut index: usize = 0;
@@ -458,7 +456,7 @@ pub fn etch(path: &str, data: Data, settings: Settings) -> anyhow::Result<()> {
                             EmbedSource::new(settings.size, settings.width, settings.height);
                         match etch_bw(&mut source, &chunk[index..], &mut index) {
                             Ok(_) => frames.push(source),
-                            Err(v) => {
+                            Err(_) => {
                                 frames.push(source);
                                 println!("Embedding thread complete!");
                                 break;
@@ -466,7 +464,7 @@ pub fn etch(path: &str, data: Data, settings: Settings) -> anyhow::Result<()> {
                         }
                     }
 
-                    return frames;
+                    frames
                 });
 
                 spool.push(thread);
@@ -503,14 +501,14 @@ pub fn etch(path: &str, data: Data, settings: Settings) -> anyhow::Result<()> {
 
     println!("Video embedded successfully at {}", path);
 
-    return Ok(());
+    Ok(())
 }
 
 pub fn read(path: &str, threads: usize) -> anyhow::Result<Vec<u8>> {
     let _timer = Timer::new("Dislodging frame");
     let instruction_size = 5;
 
-    let mut video = VideoCapture::from_file(&path, CAP_ANY).expect("Could not open video path");
+    let mut video = VideoCapture::from_file(path, CAP_ANY).expect("Could not open video path");
     let mut frame = Mat::default();
 
     video.read(&mut frame)?;
@@ -521,7 +519,10 @@ pub fn read(path: &str, threads: usize) -> anyhow::Result<Vec<u8>> {
     let mut byte_data = Vec::new();
     let mut current_frame = 1;
     loop {
-        if frame.is_empty() {
+        let mut frame = Mat::default();
+
+        video.read(&mut frame)?;
+        if frame.cols() == 0 {
             break;
         }
 
@@ -540,13 +541,11 @@ pub fn read(path: &str, threads: usize) -> anyhow::Result<Vec<u8>> {
         };
 
         byte_data.extend_from_slice(&frame_data);
-
-        video.read(&mut frame)?;
         current_frame += 1;
     }
 
     println!("Video read successfully");
-    return Ok(byte_data);
+    Ok(byte_data)
 }
 
 //Uses literally all the RAM
