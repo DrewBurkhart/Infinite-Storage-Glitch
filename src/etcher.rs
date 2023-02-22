@@ -168,27 +168,21 @@ fn etch_bw(
 
     for y in (0..height).step_by(size) {
         for x in (0..width).step_by(size) {
-            let local_index = global_index.clone();
+            let local_index = *global_index;
 
-            let brightness = if data[local_index] == true {
-                255 // 1
+            if let Some(&bit) = data.get(local_index) {
+                let brightness = if bit { 255 } else { 0 };
+                let rgb = vec![brightness, brightness, brightness];
+
+                etch_pixel(source, rgb, x, y)?;
+                *global_index += 1;
             } else {
-                0 // 0
-            };
-            let rgb = vec![brightness, brightness, brightness];
-
-            //Actually embeds the data
-            etch_pixel(source, rgb, x, y).unwrap();
-
-            //Increment index so we move along the data
-            *global_index += 1;
-            if *global_index >= data.len() {
-                return Err(Error::msg("Index beyond data"));
+                return Err(anyhow::anyhow!("Index beyond data"));
             }
         }
     }
 
-    return Ok(());
+    Ok(())
 }
 
 fn etch_color(
