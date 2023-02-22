@@ -198,25 +198,19 @@ fn etch_color(
 
     for y in (0..height).step_by(size) {
         for x in (0..width).step_by(size) {
-            let local_index = global_index.clone();
+            let local_index = *global_index;
 
-            let rgb = vec![
-                data[local_index],     //Red
-                data[local_index + 1], //Green
-                data[local_index + 2], //Blue
-            ];
-
-            etch_pixel(source, rgb, x, y).unwrap();
-
-            //Increment index so we move along the data
-            *global_index += 3;
-            if *global_index + 2 >= data.len() {
-                return Err(Error::msg("Index beyond data"));
+            if let Some(slice) = data.get(local_index..local_index + 3) {
+                let rgb = slice.to_vec();
+                etch_pixel(source, rgb, x, y)?;
+                *global_index += 3;
+            } else {
+                return Err(anyhow::anyhow!("Index beyond data"));
             }
         }
     }
 
-    return Ok(());
+    Ok(())
 }
 
 fn read_bw(
