@@ -22,11 +22,10 @@ pub fn rip_binary(byte_data: Vec<u8>) -> anyhow::Result<Vec<bool>> {
     let mut binary_data = Vec::with_capacity(byte_data.len() * 8);
 
     for byte in byte_data {
-        let mut bits = [false; 8];
         for i in (0..8).rev() {
-            bits[i] = (byte >> i) & 1 != 0;
+            let bit = ((byte >> i) & 1) != 0;
+            binary_data.push(bit);
         }
-        binary_data.extend(bits);
     }
 
     println!("Binary ripped successfully");
@@ -39,7 +38,8 @@ pub fn rip_binary_u32(bytes: Vec<u32>) -> anyhow::Result<Vec<bool>> {
 
     for byte in bytes {
         for i in (0..32).rev() {
-            binary_data.push((byte >> i) & 1 != 0);
+            let bit = ((byte >> i) & 1) != 0;
+            binary_data.push(bit);
         }
     }
 
