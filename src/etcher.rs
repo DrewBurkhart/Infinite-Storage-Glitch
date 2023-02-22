@@ -520,20 +520,15 @@ pub fn read(path: &str, threads: usize) -> anyhow::Result<Vec<u8>> {
     let mut video = VideoCapture::from_file(&path, CAP_ANY).expect("Could not open video path");
     let mut frame = Mat::default();
 
-    //Could probably avoid cloning
     video.read(&mut frame)?;
-    let instruction_source = EmbedSource::from(frame.clone(), instruction_size);
+    let instruction_source = EmbedSource::from(frame, instruction_size);
     let (out_mode, final_frame, final_byte, settings) =
         read_instructions(&instruction_source, threads)?;
 
     let mut byte_data = Vec::new();
     let mut current_frame = 1;
     loop {
-        // let _timer = Timer::new("Reading frame  (clone included)");
-        video.read(&mut frame)?;
-
-        //If it reads an empty image, the video stopped
-        if frame.cols() == 0 {
+        if frame.is_empty() {
             break;
         }
 
@@ -541,22 +536,23 @@ pub fn read(path: &str, threads: usize) -> anyhow::Result<Vec<u8>> {
             println!("On frame: {}", current_frame);
         }
 
-        let source = EmbedSource::from(frame.clone(), settings.size);
+        let source = EmbedSource::from(frame, settings.size);
 
         let frame_data = match out_mode {
-            OutputMode::Color => read_color(&source, current_frame, 99999999, final_byte).unwrap(),
+            OutputMode::Color => read_color(&source, current_frame, 99999999, final_byte)?,
             OutputMode::Binary => {
-                let binary_data = read_bw(&source, current_frame, final_frame, final_byte).unwrap();
-                translate_u8(binary_data).unwrap()
+                let binary_data = read_bw(&source, current_frame, final_frame, final_byte)?;
+                translate_u8(binary_data)?
             }
         };
 
-        current_frame += 1;
+        byte_data.extend_from_slice(&frame_data);
 
-        byte_data.extend(frame_data);
+        video.read(&mut frame)?;
+        current_frame += 1;
     }
 
-    println!("Video read succesfully");
+    println!("Video read successfully");
     return Ok(byte_data);
 }
 
