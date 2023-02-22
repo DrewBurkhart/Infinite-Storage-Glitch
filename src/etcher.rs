@@ -265,25 +265,24 @@ fn read_color(
     let mut byte_data: Vec<u8> = Vec::new();
     for y in (0..height).step_by(size) {
         for x in (0..width).step_by(size) {
-            let rgb = get_pixel(&source, x, y);
-            if rgb == None {
-                continue;
-            } else {
-                let rgb = rgb.unwrap();
-                byte_data.push(rgb[0]);
-                byte_data.push(rgb[1]);
-                byte_data.push(rgb[2]);
+            if let Some(rgb) = get_pixel(&source, x, y) {
+                byte_data.extend_from_slice(&rgb);
             }
         }
     }
 
     //Cut off nasty bits at the end
     if current_frame == final_frame {
-        let slice = byte_data[0..final_byte as usize].to_vec();
-        return Ok(slice);
+        if let Some(slice) = byte_data.get(..final_byte as usize * 3) {
+            return Ok(slice.to_vec());
+        }
     }
 
-    return Ok(byte_data);
+    if let Some(slice) = byte_data.get(..) {
+        return Ok(slice.to_vec());
+    }
+
+    Ok(Vec::new())
 }
 
 /*
